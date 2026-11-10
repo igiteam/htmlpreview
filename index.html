@@ -41,7 +41,7 @@
 	</style>
 </head>
 <body>
-	<form id="previewform" onsubmit="location.href='/?'+this.file.value;return false">
+	<form id="previewform" onsubmit="location.href='/?'+encodeURIComponent(this.file.value);return false">
 		<h1>GitHub &amp; BitBucket HTML Preview</h1>
 		<p>
 			Enter URL of the HTML file to preview:
@@ -49,23 +49,37 @@
 			<input type="submit" value="Preview">
 		</p>
 		<p>or prepend to the URL: <code><strong>http://html.macosxjs.com/?</strong>https://github.com/twbs/bootstrap/blob/gh-pages/2.3.2/index.html</code></p>
+		<p>or use the param form: <code><strong>http://html.macosxjs.com/?url=</strong>https://github.com/twbs/bootstrap/blob/gh-pages/2.3.2/index.html</code></p>
 	</form>
 
 	<script>
 	(function () {
 
-		// ---- Cache reset: hard-reload once per session if marked ----
-		// If the page was loaded from cache, force a network reload with cache: 'reload'
-		if (window.performance && window.performance.getEntriesByType) {
-			var navEntry = performance.getEntriesByType('navigation')[0];
-			if (navEntry && navEntry.type === 'reload' || (navEntry && navEntry.transferSize === 0)) {
-				// Loaded from cache — force fetch new copies of assets below
-			}
-		}
-
 		var previewForm = document.getElementById('previewform');
 
-		var url = location.search.substring(1).replace(/\/\/github\.com/, '//raw.githubusercontent.com').replace(/\/blob\//, '/'); //Get URL of the raw file
+		// ---- Parse the target URL from BOTH formats ----
+		//   ?https://github.com/...        (prepend)
+		//   ?url=https://github.com/...    (named param)
+		var parseTargetUrl = function () {
+			var q = location.search.substring(1); // strip leading '?'
+			if (!q) return '';
+
+			// Named param form: ?url=...
+			if (/^url=/i.test(q)) {
+				q = q.replace(/^url=/i, '');
+			}
+
+			// Decode (in case it was URL-encoded)
+			try { q = decodeURIComponent(q); } catch (e) { /* leave as-is */ }
+
+			// Normalise GitHub URLs -> raw
+			q = q.replace(/\/\/github\.com/, '//raw.githubusercontent.com')
+			     .replace(/\/blob\//, '/');
+
+			return q;
+		};
+
+		var url = parseTargetUrl();
 
 		var replaceAssets = function () {
 			var frame, a, link, links = [], script, scripts = [], i, href, src;
